@@ -1,10 +1,15 @@
 import 'dart:io';
 import 'package:file_picker/file_picker.dart';
+import 'package:audio_session/audio_session.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:path_provider/path_provider.dart';
 
 class AdhanService {
-  final AudioPlayer _player = AudioPlayer();
+  final AudioPlayer _player = AudioPlayer()
+    ..setAndroidAudioAttributes(const AndroidAudioAttributes(
+      usage: AndroidAudioUsage.alarm,
+      contentType: AndroidAudioContentType.music,
+    ));
 
   Future<void> setVolume(double volume) => _player.setVolume(volume.clamp(0.0, 1.0));
 

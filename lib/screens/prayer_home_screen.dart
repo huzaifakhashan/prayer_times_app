@@ -2,18 +2,19 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:adhan_dart/adhan_dart.dart';
-import 'package:prayer_timer/Drawer/drawerPage.dart';
+
 
 import '../models/app_settings.dart';
 import '../models/prayer_item.dart';
 import '../services/adhan_service.dart';
-import '../services/alarm_service.dart';
+import '../services/background_service.dart';
 import '../services/location_service.dart';
 import '../services/notification_service.dart';
 import '../services/permission_service.dart';
 import '../services/prayer_service.dart';
 import '../utils/constants.dart';
 import '../utils/time_formatter.dart';
+import '../widgets/app_drawer.dart';
 import '../widgets/error_view.dart';
 import '../widgets/next_prayer_card.dart';
 import '../widgets/prayer_list_item.dart';
@@ -122,7 +123,7 @@ class _PrayerHomeScreenState extends State<PrayerHomeScreen>
         method: CalcMethod.values[p.getInt('method') ?? 0],
         showSunrise: p.getBool('showSunrise') ?? true,
         use24Hour: p.getBool('use24Hour') ?? false,
-        adhanEnabled: p.getBool('adhanEnabled') ?? false,
+        adhanEnabled: p.getBool('adhanEnabled') ?? true,
         adhanFiles: files,
         adhanVolumes: volumes,
       );
@@ -151,17 +152,7 @@ class _PrayerHomeScreenState extends State<PrayerHomeScreen>
       await p.setDouble('adhanVolume_${e.key}', e.value);
     }
 
-    await _scheduleAlarms();
-  }
-
-  Future<void> _scheduleAlarms() async {
-    if (_lat == null || _lng == null || _prayers.isEmpty) return;
-    await AlarmService.scheduleAll(
-      todayPrayers: _prayers,
-      settings: _settings,
-      lat: _lat!,
-      lng: _lng!,
-    );
+    await BackgroundAdhanService.sync(_settings.adhanEnabled);
   }
 
   void _startTimer() {
@@ -223,7 +214,7 @@ class _PrayerHomeScreenState extends State<PrayerHomeScreen>
 
     _lat = result.lat;
     _lng = result.lng;
-    await AlarmService.cacheLocation(result.lat!, result.lng!);
+    await BackgroundAdhanService.cacheLocation(result.lat!, result.lng!);
     _recalc();
     setState(() => _loading = false);
   }
@@ -243,7 +234,7 @@ class _PrayerHomeScreenState extends State<PrayerHomeScreen>
     _prayers = result.prayers;
     _tomorrowFajr = result.tomorrowFajr;
     setState(() {});
-    _scheduleAlarms();
+    BackgroundAdhanService.sync(_settings.adhanEnabled);
   }
 
   PrayerItem? _nextPrayer() {
@@ -307,7 +298,7 @@ class _PrayerHomeScreenState extends State<PrayerHomeScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      drawer: const Drawerpage(),
+      drawer: const AppDrawer(),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,

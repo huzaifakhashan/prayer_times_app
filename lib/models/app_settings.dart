@@ -26,7 +26,7 @@ class AppSettings {
     this.method = CalcMethod.muslimWorldLeague,
     this.showSunrise = true,
     this.use24Hour = false,
-    this.adhanEnabled = false,
+    this.adhanEnabled = true,
     Map<String, String?>? adhanFiles,
     Map<String, double>? adhanVolumes,
   })  : adhanFiles = adhanFiles ?? {},

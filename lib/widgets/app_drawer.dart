@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
-import 'about_page.dart';
-import 'contact_page.dart';
-import 'rate_page.dart';
-import 'app_info_page.dart';
+import '../screens/about_page.dart';
+import '../screens/contact_page.dart';
+import '../screens/rate_page.dart';
+import '../screens/app_info_page.dart';
 
-class Drawerpage extends StatelessWidget {
+class AppDrawer extends StatelessWidget {
   final bool showLogout;
 
-  const Drawerpage({
+  const AppDrawer({
     super.key,
     this.showLogout = false,
   });

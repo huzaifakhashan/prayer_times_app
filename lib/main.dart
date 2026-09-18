@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'screens/prayer_home_screen.dart';
-import 'services/alarm_service.dart';
+import 'services/background_service.dart';
 import 'services/notification_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await AlarmService.init();
+  await BackgroundAdhanService.init();
   await NotificationService.init();
   runApp(const PrayerApp());
 }
