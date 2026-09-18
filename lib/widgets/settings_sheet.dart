@@ -182,7 +182,7 @@ class SettingsSheet extends StatelessWidget {
                 if (hasFile) ...[
                   const SizedBox(width: 8),
                   IconButton(
-                    onPressed: () => adhanService.preview(path),
+                    onPressed: () => adhanService.preview(path, volume: settings.volumeFor(name)),
                     icon: const Icon(Icons.play_arrow, color: Colors.green),
                   ),
                   IconButton(
@@ -195,9 +195,33 @@ class SettingsSheet extends StatelessWidget {
                 ],
               ],
             ),
+            if (hasFile) _volumeRow(name, setState),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _volumeRow(String name, StateSetter setState) {
+    final volume = settings.volumeFor(name);
+    return Row(
+      children: [
+        const Icon(Icons.volume_down, color: AppColors.primary, size: 20),
+        Expanded(
+          child: Slider(
+            value: volume,
+            min: 0,
+            max: 1,
+            divisions: 20,
+            label: '${(volume * 100).round()}%',
+            onChanged: (v) {
+              setState(() => settings.adhanVolumes[name] = v);
+              adhanService.setVolume(v);
+            },
+          ),
+        ),
+        const Icon(Icons.volume_up, color: AppColors.primary, size: 20),
+      ],
     );
   }
 }

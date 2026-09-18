@@ -19,6 +19,7 @@ class AppSettings {
   bool use24Hour;
   bool adhanEnabled;
   Map<String, String?> adhanFiles;
+  Map<String, double> adhanVolumes;
 
   AppSettings({
     this.madhab = Madhab.shafi,
@@ -27,7 +28,11 @@ class AppSettings {
     this.use24Hour = false,
     this.adhanEnabled = false,
     Map<String, String?>? adhanFiles,
-  }) : adhanFiles = adhanFiles ?? {};
+    Map<String, double>? adhanVolumes,
+  })  : adhanFiles = adhanFiles ?? {},
+        adhanVolumes = adhanVolumes ?? {};
+
+  double volumeFor(String prayer) => adhanVolumes[prayer] ?? 1.0;
 
   static const adhanPrayers = PrayerNames.adhanList;
 }

@@ -33,18 +33,18 @@ class PrayerService {
     }
   }
 
-  static PrayerResult calculate({
+  static List<PrayerItem> forDate({
     required double lat,
     required double lng,
     required AppSettings settings,
+    required DateTime date,
   }) {
-    final now = DateTime.now();
     final coords = Coordinates(lat, lng);
     final params = _paramsFor(settings.method)..madhab = settings.madhab;
 
     final times = PrayerTimes(
       coordinates: coords,
-      date: now,
+      date: date,
       calculationParameters: params,
       precision: false,
     );
@@ -56,7 +56,7 @@ class PrayerService {
     final maghrib = times.maghrib.toLocal();
     final isha = times.isha.toLocal();
 
-    final list = <PrayerItem>[
+    return <PrayerItem>[
       PrayerItem(name: PrayerNames.fajr, time: fajr, icon: Icons.nightlight_round),
       if (settings.showSunrise)
         PrayerItem(name: PrayerNames.sunrise, time: sunrise, icon: Icons.wb_sunny),
@@ -65,15 +65,20 @@ class PrayerService {
       PrayerItem(name: PrayerNames.maghrib, time: maghrib, icon: Icons.wb_twilight),
       PrayerItem(name: PrayerNames.isha, time: isha, icon: Icons.nights_stay),
     ];
+  }
+
+  static PrayerResult calculate({
+    required double lat,
+    required double lng,
+    required AppSettings settings,
+  }) {
+    final now = DateTime.now();
+    final list = forDate(lat: lat, lng: lng, settings: settings, date: now);
 
     final tomorrow = now.add(const Duration(days: 1));
-    final tTimes = PrayerTimes(
-      coordinates: coords,
-      date: tomorrow,
-      calculationParameters: params,
-      precision: false,
-    );
+    final tomorrowList = forDate(lat: lat, lng: lng, settings: settings, date: tomorrow);
+    final tomorrowFajr = tomorrowList.firstWhere((p) => p.name == PrayerNames.fajr).time;
 
-    return PrayerResult(list, tTimes.fajr.toLocal());
+    return PrayerResult(list, tomorrowFajr);
   }
 }

@@ -7,7 +7,10 @@ import 'package:prayer_timer/Drawer/drawerPage.dart';
 import '../models/app_settings.dart';
 import '../models/prayer_item.dart';
 import '../services/adhan_service.dart';
+import '../services/alarm_service.dart';
 import '../services/location_service.dart';
+import '../services/notification_service.dart';
+import '../services/permission_service.dart';
 import '../services/prayer_service.dart';
 import '../utils/constants.dart';
 import '../utils/time_formatter.dart';
@@ -47,8 +50,45 @@ class _PrayerHomeScreenState extends State<PrayerHomeScreen>
   }
 
   Future<void> _init() async {
+    await NotificationService.requestPermissions();
     await _loadSettings();
     _startTimer();
+
+    if (_settings.adhanEnabled && await PermissionService.needsSetup()) {
+      _showBackgroundPermissionDialog();
+    }
+  }
+
+  void _showBackgroundPermissionDialog() {
+    if (!mounted) return;
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: AppColors.sheetBg,
+        title: const Text('صلاحيات ضرورية لتشغيل الأذان'),
+        content: const Text(
+          'حتى يرن الأذان بوقته حتى لو التطبيق مسكر، لازم تسمح للتطبيق بصلاحيتين:\n\n'
+          '١. جدولة التنبيهات الدقيقة (Alarms & reminders)\n'
+          '٢. تجاهل توفير البطارية لهذا التطبيق\n\n'
+          'من دونهم نظام الأندرويد بيقتل التنبيه قبل ما يرن.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('لاحقاً'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(dialogContext);
+              await PermissionService.requestExactAlarm();
+              await PermissionService.requestIgnoreBatteryOptimizations();
+              if (_lat != null && _lng != null) _recalc();
+            },
+            child: const Text('السماح'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -70,8 +110,10 @@ class _PrayerHomeScreenState extends State<PrayerHomeScreen>
     final p = await SharedPreferences.getInstance();
 
     final files = <String, String?>{};
+    final volumes = <String, double>{};
     for (final n in AppSettings.adhanPrayers) {
       files[n] = p.getString('adhan_$n');
+      volumes[n] = p.getDouble('adhanVolume_$n') ?? 1.0;
     }
 
     setState(() {
@@ -82,6 +124,7 @@ class _PrayerHomeScreenState extends State<PrayerHomeScreen>
         use24Hour: p.getBool('use24Hour') ?? false,
         adhanEnabled: p.getBool('adhanEnabled') ?? false,
         adhanFiles: files,
+        adhanVolumes: volumes,
       );
     });
 
@@ -103,6 +146,22 @@ class _PrayerHomeScreenState extends State<PrayerHomeScreen>
         await p.remove('adhan_${e.key}');
       }
     }
+
+    for (final e in _settings.adhanVolumes.entries) {
+      await p.setDouble('adhanVolume_${e.key}', e.value);
+    }
+
+    await _scheduleAlarms();
+  }
+
+  Future<void> _scheduleAlarms() async {
+    if (_lat == null || _lng == null || _prayers.isEmpty) return;
+    await AlarmService.scheduleAll(
+      todayPrayers: _prayers,
+      settings: _settings,
+      lat: _lat!,
+      lng: _lng!,
+    );
   }
 
   void _startTimer() {
@@ -138,7 +197,7 @@ class _PrayerHomeScreenState extends State<PrayerHomeScreen>
         if (_lastPlayed != key) {
           _lastPlayed = key;
           final path = _settings.adhanFiles[p.name];
-          if (path != null) _adhan.play(path);
+          if (path != null) _adhan.play(path, volume: _settings.volumeFor(p.name));
         }
       }
     }
@@ -164,6 +223,7 @@ class _PrayerHomeScreenState extends State<PrayerHomeScreen>
 
     _lat = result.lat;
     _lng = result.lng;
+    await AlarmService.cacheLocation(result.lat!, result.lng!);
     _recalc();
     setState(() => _loading = false);
   }
@@ -183,6 +243,7 @@ class _PrayerHomeScreenState extends State<PrayerHomeScreen>
     _prayers = result.prayers;
     _tomorrowFajr = result.tomorrowFajr;
     setState(() {});
+    _scheduleAlarms();
   }
 
   PrayerItem? _nextPrayer() {
@@ -223,6 +284,9 @@ class _PrayerHomeScreenState extends State<PrayerHomeScreen>
         onSave: () async {
           await _saveSettings();
           _recalc();
+          if (_settings.adhanEnabled && await PermissionService.needsSetup()) {
+            _showBackgroundPermissionDialog();
+          }
         },
         onPickFile: (name) async {
           final path = await _adhan.pickAndCopy(name);

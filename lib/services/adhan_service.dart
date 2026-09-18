@@ -6,7 +6,9 @@ import 'package:path_provider/path_provider.dart';
 class AdhanService {
   final AudioPlayer _player = AudioPlayer();
 
-  Future<void> play(String path) async {
+  Future<void> setVolume(double volume) => _player.setVolume(volume.clamp(0.0, 1.0));
+
+  Future<void> play(String path, {double volume = 1.0}) async {
     if (path.isEmpty) return;
 
     final file = File(path);
@@ -14,15 +16,17 @@ class AdhanService {
 
     try {
       await _player.stop();
+      await _player.setVolume(volume.clamp(0.0, 1.0));
       await _player.setFilePath(path);
       await _player.play();
     } catch (_) {}
   }
 
-  Future<void> preview(String path) async {
+  Future<void> preview(String path, {double volume = 1.0}) async {
     if (_player.playing) {
       await _player.stop();
     } else {
+      await _player.setVolume(volume.clamp(0.0, 1.0));
       await _player.setFilePath(path);
       await _player.play();
     }
